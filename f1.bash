@@ -1,0 +1,161 @@
+#!/bin/bash
+
+set -o pipefail
+
+bar_name="${1:-bar1}"
+config_path="$HOME/.config/polybar/config.ini"
+polybar_dir="$HOME/.config/polybar"
+
+fallback_monitor="HDMI-A-0"
+main_monitor="DisplayPort-0"
+
+echo "In Toggle: bar_name = $bar_name"
+
+# ------------------------------------------------------------
+# Monitor detection
+# ------------------------------------------------------------
+
+mapfile -t monitor_array < <(
+    xrandr --query |
+        awk '$2 == "connected" { print $1 }'
+)
+
+echo "Main Monitor    : <$main_monitor>"
+printf 'Fallback Monitor: <%s>\n\n' "$fallback_monitor"
+
+echo "All Monitors:"
+printf '%s\n' "${monitor_array[@]}"
+printf '\n'
+
+main_monitor_exists=false
+
+for monitor in "${monitor_array[@]}"; do
+    if [[ "$monitor" == "$main_monitor" ]]; then
+        main_monitor_exists=true
+        break
+    fi
+done
+
+if [[ "$main_monitor_exists" == false ]]; then
+    echo "$main_monitor is not connected."
+    main_monitor="$fallback_monitor"
+    echo "Using fallback monitor: $main_monitor"
+fi
+
+notify-send "$main_monitor"
+
+# ------------------------------------------------------------
+# Polybar process detection
+# ------------------------------------------------------------
+
+# Return PIDs whose final Polybar argument matches the instance.
+bar_pids() {
+    local pid
+    local -a args
+
+    while IFS= read -r pid; do
+        [[ -r "/proc/$pid/cmdline" ]] || continue
+
+        args=()
+        mapfile -d '' -t args < "/proc/$pid/cmdline"
+
+        ((${#args[@]} > 0)) || continue
+
+        if [[ "${args[-1]}" == "$1" ]]; then
+            printf '%s\n' "$pid"
+        fi
+    done < <(pgrep -x polybar)
+}
+
+bar_running() {
+    [[ -n "$(bar_pids "$1")" ]]
+}
+
+stop_bar() {
+    local name="$1"
+    local pid
+
+    while IFS= read -r pid; do
+        [[ -n "$pid" ]] || continue
+        echo "Stopping $name (PID $pid)"
+        kill "$pid" 2>/dev/null || true
+    done < <(bar_pids "$name")
+}
+
+stop_top_bars() {
+    stop_bar bar0
+    stop_bar bar1
+}
+
+stop_bottom_bars() {
+    stop_bar bar2
+    stop_bar bar3
+}
+
+# ------------------------------------------------------------
+# Top bars: bar0 and bar1
+# bar0 on the main monitor, bar1 on the other monitors.
+# Toggle either one to hide/show the top bars.
+# ------------------------------------------------------------
+
+if [[ "$bar_name" == "bar0" || "$bar_name" == "bar1" ]]; then
+    if bar_running bar0 || bar_running bar1; then
+        stop_top_bars
+    else
+        MONITOR="$main_monitor" \
+            polybar --reload --config="$config_path" bar0 &
+
+        for monitor in "${monitor_array[@]}"; do
+            if [[ "$monitor" != "$main_monitor" ]]; then
+                MONITOR="$monitor" \
+                    polybar --reload --config="$config_path" bar1 &
+            fi
+        done
+    fi
+
+    exit 0
+fi
+
+# ------------------------------------------------------------
+# Bottom bars: bar2 and bar3
+# Toggle either one to hide/show the bottom bars.
+# ------------------------------------------------------------
+
+if [[ "$bar_name" == "bar2" ]]; then
+    if bar_running bar2 || bar_running bar3; then
+        stop_bottom_bars
+    else
+        "$polybar_dir/polykill_bar" bar2
+        "$polybar_dir/polykill_bar" bar3
+        "$polybar_dir/polylaunch" bar2
+    fi
+
+    exit 0
+fi
+
+if [[ "$bar_name" == "bar3" ]]; then
+    if bar_running bar2 || bar_running bar3; then
+        stop_bottom_bars
+    else
+        "$polybar_dir/polykill_bar" bar2
+        "$polybar_dir/polykill_bar" bar3
+        "$polybar_dir/polylaunch" bar3
+    fi
+
+    exit 0
+fi
+
+# ------------------------------------------------------------
+# Any other bar
+# ------------------------------------------------------------
+
+if bar_running "$bar_name"; then
+    echo "$bar_name is being killed"
+    stop_bar "$bar_name"
+else
+    echo "$bar_name is being launched"
+    "$polybar_dir/polylaunch" "$bar_name"
+fi
+
+exit 0
+
