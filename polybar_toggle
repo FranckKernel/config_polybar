@@ -1,6 +1,6 @@
 #!/bin/bash
 bar_name="${1:-bar1}"
-config_path="$HOME/.config/polybar/config"
+config_path="$HOME/.config/polybar/config.ini"
 echo "in Toggle: bar_name = $bar_name"
 
 fallback_monitor="HDMI-A-0"
@@ -15,7 +15,7 @@ printf "Fallback Monitor:  <$fallback_monitor>\n\n"
 
 echo "All Monitors:"
 printf "$all_monitors\n\n"
-readarray -t monitor_array <<< "$all_monitors"
+readarray -t monitor_array <<<"$all_monitors"
 
 # Function to check if a monitor is in the list
 function main_monitor_exists {
@@ -38,20 +38,18 @@ else
 	#notify-send "Main monitor was set to fallback monitor | m: $main_monitor | f: $fallback_monitor"
 fi
 
-
 notify-send "$main_monitor"
 #---------------------Top bar---------------------
 if [ "$bar_name" = "bar0" ] || [ "$bar_name" = "bar1" ]; then
-	if pgrep -a "polybar" | grep "config bar0\|config bar1"; then	
+	if pgrep -a "polybar" | grep "config bar0\|config bar1"; then
 		"$HOME/.config/polybar/polykill_bar" "bar0"
 		"$HOME/.config/polybar/polykill_bar" "bar1"
 	else
 		MONITOR=$main_monitor polybar --reload --config="$config_path" "bar0" &
 
-
 		for m in "${monitor_array[@]}"; do
 			if [[ "$m" != "$main_monitor" ]]; then
-				MONITOR=$m   polybar --reload --config="$config_path" "bar1" &
+				MONITOR=$m polybar --reload --config="$config_path" "bar1" &
 			fi
 		done
 
@@ -59,27 +57,22 @@ if [ "$bar_name" = "bar0" ] || [ "$bar_name" = "bar1" ]; then
 	exit 0
 fi
 
-
-
-
 #--------------------Bottom bars-----------------------------
 
 launch_bottom_bar() {
 	echo "$bar_name is being launched"
 
 	for monitor in "${monitor_array[@]}"; do
-		MONITOR=$monitor   polybar --reload --config="$config_path" "$bar_name" &
+		MONITOR=$monitor polybar --reload --config="$config_path" "$bar_name" &
 	done
 	#"$HOME/.config/polybar/polylaunch" $bar_name
 }
 
-
-
-if [ "$bar_name" = "bar2"] ; then
-	if pgrep -a "polybar" | grep "config bar2" ; then
+if [ "$bar_name" = "bar2"]; then
+	if pgrep -a "polybar" | grep "config bar2"; then
 		"$HOME/.config/polybar/polykill_bar" "bar2"
 		"$HOME/.config/polybar/polykill_bar" "bar3"
-	else    
+	else
 		"$HOME/.config/polybar/polykill_bar" "bar2"
 		"$HOME/.config/polybar/polykill_bar" "bar3"
 		"$HOME/.config/polybar/polylaunch" "$bar_name"
@@ -87,8 +80,8 @@ if [ "$bar_name" = "bar2"] ; then
 	exit 0
 fi
 
-if [ "$bar_name" = "bar3"] ; then
-	if pgrep -a "polybar" | grep "config bar3" ; then
+if [ "$bar_name" = "bar3"]; then
+	if pgrep -a "polybar" | grep "config bar3"; then
 		"$HOME/.config/polybar/polykill_bar" "bar2"
 		"$HOME/.config/polybar/polykill_bar" "bar3"
 	else
@@ -99,10 +92,8 @@ if [ "$bar_name" = "bar3"] ; then
 	exit 0
 fi
 
-
-
 #------------------------Any other bar----------------------------
-if pgrep -a "polybar" | grep -e "config $bar_name" ; then
+if pgrep -a "polybar" | grep -e "config $bar_name"; then
 	echo "$bar_name is being killed"
 	"$HOME/.config/polybar/polykill_bar" $bar_name
 	exit 0
