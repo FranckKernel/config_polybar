@@ -68,7 +68,7 @@ launch_bottom_bar() {
 	#"$HOME/.config/polybar/polylaunch" $bar_name
 }
 
-if [ "$bar_name" = "bar2"]; then
+if [ "$bar_name" = "bar2" ]; then
 	if pgrep -a "polybar" | grep "config bar2"; then
 		"$HOME/.config/polybar/polykill_bar" "bar2"
 		"$HOME/.config/polybar/polykill_bar" "bar3"
@@ -80,14 +80,14 @@ if [ "$bar_name" = "bar2"]; then
 	exit 0
 fi
 
-if [ "$bar_name" = "bar3"]; then
+if [ "$bar_name" = "bar3" ]; then
 	if pgrep -a "polybar" | grep "config bar3"; then
 		"$HOME/.config/polybar/polykill_bar" "bar2"
 		"$HOME/.config/polybar/polykill_bar" "bar3"
 	else
 		"$HOME/.config/polybar/polykill_bar" "bar3"
 		"$HOME/.config/polybar/polylaunch" "$bar_name"
-		"$HOME/.config/polybar/polylaunch" "$bar_name"
+		# "$HOME/.config/polybar/polylaunch" "$bar_name"
 	fi
 	exit 0
 fi
